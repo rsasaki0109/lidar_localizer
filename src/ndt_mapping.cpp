@@ -42,7 +42,8 @@ static pcl::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI> ndt;
 
 // Default values
 static int max_iter = 30;        // Maximum iterations
-static float ndt_res = 1.0;      // Resolution
+//static float ndt_res = 1.0;      // Resolution
+static float ndt_res = 5.0;      // Resolution
 static double step_size = 0.1;   // Step size
 static double trans_eps = 0.01;  // Transformation epsilon
 
@@ -63,11 +64,11 @@ static int initial_scan_loaded = 0;
 
 static Eigen::Matrix4f gnss_transform = Eigen::Matrix4f::Identity();
 
-//static double min_scan_range = 5.0;
-static double min_scan_range = 1.0;
+static double min_scan_range = 5.0;
+//static double min_scan_range = 1.0;
 static double max_scan_range = 200.0;
-//static double min_add_scan_shift = 1.0;
-static double min_add_scan_shift = 0.5;
+static double min_add_scan_shift = 1.0;
+//static double min_add_scan_shift = 0.5;
 
 static double _tf_x=0.0, _tf_y=0.0, _tf_z=0.0, _tf_roll=0.0, _tf_pitch=0.0, _tf_yaw=0.0;
 static Eigen::Matrix4f tf_btol, tf_ltob;//base_link2localizer等の略?
