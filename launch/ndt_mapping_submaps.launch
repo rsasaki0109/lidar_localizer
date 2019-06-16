@@ -1,0 +1,8 @@
+<!-- -->
+<launch>
+  <node pkg="tf" type="static_transform_publisher" name="velodyne" args="0 0 0 0 0 0 base_link velodyne 100" />
+  <!-- rosrun lidar_localizer ndt_mapping  -->
+  <node pkg="ndt_mapping" type="ndt_mapping_submaps" name="ndt_mapping_submaps" output="screen">
+  </node>
+
+</launch>
