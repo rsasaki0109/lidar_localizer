@@ -1,91 +1,68 @@
-#define OUTPUT  // If you want to output "position_log.txt", "#define OUTPUT".
+#include "ndt_mapping.h"
 
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
+ndt_mapping::ndt_mapping() 
+{
 
-#include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <std_msgs/Bool.h>
-#include <std_msgs/Float32.h>
-#include <velodyne_pointcloud/point_types.h>
-#include <velodyne_pointcloud/rawdata.h>
+  points_sub = nh.subscribe("points_raw", 100000, &ndt_mapping::points_callback,this);
+  ndt_map_pub = nh.advertise<sensor_msgs::PointCloud2>("/ndt_map", 1000);
+  current_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 1000);
 
-#include <tf/transform_broadcaster.h>
-#include <tf/transform_datatypes.h>
+  diff = 0.0, diff_x = 0.0, diff_y = 0.0, diff_z = 0.0, diff_yaw= 0.0;  // current_pose - previous_pose
 
-#include <pcl/io/io.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
-
-#include <pcl/registration/ndt.h>
-
-#include <time.h>
-
-struct pose{double x,y,z;double roll,pitch,yaw;};
-
-// global variables
-static pose previous_pose, guess_pose, current_pose, ndt_pose, added_pose, localizer_pose;
-
-static ros::Time current_scan_time,previous_scan_time;
-static ros::Duration scan_duration;
-
-static double diff = 0.0, diff_x = 0.0, diff_y = 0.0, diff_z = 0.0, diff_yaw;  // current_pose - previous_pose
-
-static double current_velocity_x = 0.0, current_velocity_y = 0.0, current_velocity_z = 0.0;
-
-static pcl::PointCloud<pcl::PointXYZI> map;
-
-static pcl::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI> ndt;
-
-// Default values
-static int max_iter = 30;        // Maximum iterations
-//static float ndt_res = 1.0;      // Resolution
-static float ndt_res = 5.0;      // Resolution
-static double step_size = 0.1;   // Step size
-static double trans_eps = 0.01;  // Transformation epsilon
-
-// Leaf size of VoxelGrid filter.
-static double voxel_leaf_size = 2.0;
-
-static ros::Time callback_start, callback_end, t1_start, t1_end, t2_start, t2_end, t3_start, t3_end, t4_start, t4_end,
-    t5_start, t5_end;
-static ros::Duration d_callback, d1, d2, d3, d4, d5;
-
-static ros::Publisher ndt_map_pub, current_pose_pub,guess_pose_linaer_pub;
-static geometry_msgs::PoseStamped current_pose_msg, guess_pose_msg;
-
-static ros::Publisher ndt_stat_pub;
-static std_msgs::Bool ndt_stat_msg;
-
-static int initial_scan_loaded = 0;
-
-static Eigen::Matrix4f gnss_transform = Eigen::Matrix4f::Identity();
-
-static double min_scan_range = 5.0;
-//static double min_scan_range = 1.0;
-static double max_scan_range = 200.0;
-static double min_add_scan_shift = 1.0;
-//static double min_add_scan_shift = 0.5;
-
-static double _tf_x=0.0, _tf_y=0.0, _tf_z=0.0, _tf_roll=0.0, _tf_pitch=0.0, _tf_yaw=0.0;
-static Eigen::Matrix4f tf_btol, tf_ltob;//base_link2localizer等の略?
+  current_velocity_x = 0.0, current_velocity_y = 0.0, current_velocity_z = 0.0;
 
 
-static bool _incremental_voxel_update = false;
+  // Default values
+  max_iter = 30;        // Maximum iterations
+  //static float ndt_res = 1.0;      // Resolution
+  ndt_res = 5.0;      // Resolution
+  step_size = 0.1;   // Step size
+  trans_eps = 0.01;  // Transformation epsilon
 
-static double fitness_score;
-static bool has_converged;
-static int final_num_iteration;
-static double transformation_probability;
+  // Leaf size of VoxelGrid filter.
+  voxel_leaf_size = 2.0;
+
+  initial_scan_loaded = 0;
+
+ 
+  min_scan_range = 5.0;
+  //static double min_scan_range = 1.0;
+  max_scan_range = 200.0;
+  min_add_scan_shift = 1.0;
+  //static double min_add_scan_shift = 0.5;
+
+  _tf_x=0.0, _tf_y=0.0, _tf_z=0.0, _tf_roll=0.0, _tf_pitch=0.0, _tf_yaw=0.0;
+
+  std::cout << "incremental_voxel_update: " << _incremental_voxel_update << std::endl;
 
 
-static std::ofstream ofs;
-static std::string filename;
+  std::cout << "(tf_x,tf_y,tf_z,tf_roll,tf_pitch,tf_yaw): (" << _tf_x << ", " << _tf_y << ", " << _tf_z << ", "
+            << _tf_roll << ", " << _tf_pitch << ", " << _tf_yaw << ")" << std::endl;
 
-static double calcDiffForRadian(const double lhs_rad, const double rhs_rad)
+
+  Eigen::Translation3f tl_btol(_tf_x, _tf_y, _tf_z);                 // tl: translation
+  Eigen::AngleAxisf rot_x_btol(_tf_roll, Eigen::Vector3f::UnitX());  // rot: rotation
+  Eigen::AngleAxisf rot_y_btol(_tf_pitch, Eigen::Vector3f::UnitY());
+  Eigen::AngleAxisf rot_z_btol(_tf_yaw, Eigen::Vector3f::UnitZ());
+  tf_btol = (tl_btol * rot_z_btol * rot_y_btol * rot_x_btol).matrix();
+  tf_ltob = tf_btol.inverse();
+
+  map.header.frame_id = "map";
+
+  previous_pose.x = previous_pose.y = previous_pose.z = 0.0;previous_pose.roll = previous_pose.pitch = previous_pose.yaw = 0.0;
+  ndt_pose.x = ndt_pose.y = ndt_pose.z = 0.0;ndt_pose.roll = ndt_pose.pitch = ndt_pose.yaw = 0.0;
+  current_pose.x = current_pose.y = current_pose.z = 0.0;current_pose.roll = current_pose.pitch = current_pose.yaw = 0.0;
+  guess_pose.x = guess_pose.y = guess_pose.z = 0.0;guess_pose.roll = guess_pose.pitch = guess_pose.yaw = 0.0;
+  added_pose.x = added_pose.y = added_pose.z = 0.0;added_pose.roll = added_pose.pitch = added_pose.yaw = 0.0;
+
+  diff_x = 0.0;diff_y = 0.0;diff_z = 0.0;diff_yaw = 0.0;
+
+}; 
+
+ndt_mapping::~ndt_mapping(){}; 
+
+
+double ndt_mapping::calcDiffForRadian(const double lhs_rad, const double rhs_rad)
 {
   double diff_rad = lhs_rad - rhs_rad;
   if      (diff_rad >= M_PI) diff_rad = diff_rad - 2 * M_PI;
@@ -93,8 +70,7 @@ static double calcDiffForRadian(const double lhs_rad, const double rhs_rad)
   return diff_rad;
 }
 
-
-static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
+void ndt_mapping::points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
 {
   double r;
   pcl::PointXYZI p;
@@ -166,10 +142,6 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
   Eigen::Matrix4f init_guess =
       (init_translation * init_rotation_z * init_rotation_y * init_rotation_x).matrix() * tf_btol;
 
-  t3_end = ros::Time::now();
-  d3 = t3_end - t3_start;
-
-  t4_start = ros::Time::now();
 
   pcl::PointCloud<pcl::PointXYZI>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
 
@@ -255,44 +227,15 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
 
   current_pose_pub.publish(current_pose_msg);
 
-  // Write log
-  if (!ofs)
-  {
-    std::cerr << "Could not open " << filename << "." << std::endl;
-    exit(1);
-  }
-
-  ofs << input->header.seq << ","
-      << input->header.stamp << ","
-      << input->header.frame_id << ","
-      << scan_ptr->size() << ","
-      << filtered_scan_ptr->size() << ","
-      << std::fixed << std::setprecision(5) << current_pose.x << ","
-      << std::fixed << std::setprecision(5) << current_pose.y << ","
-      << std::fixed << std::setprecision(5) << current_pose.z << ","
-      << current_pose.roll << ","
-      << current_pose.pitch << ","
-      << current_pose.yaw << ","
-      << final_num_iteration << ","
-      << fitness_score << ","
-      << ndt_res << ","
-      << step_size << ","
-      << trans_eps << ","
-      << max_iter << ","
-      << voxel_leaf_size << ","
-      << min_scan_range << ","
-      << max_scan_range << ","
-      << min_add_scan_shift << std::endl;
-
   std::cout << "-----------------------------------------------------------------" << std::endl;
   std::cout << "Sequence number: " << input->header.seq << std::endl;
   std::cout << "Number of scan points: " << scan_ptr->size() << " points." << std::endl;
   std::cout << "Number of filtered scan points: " << filtered_scan_ptr->size() << " points." << std::endl;
   std::cout << "transformed_scan_ptr: " << transformed_scan_ptr->points.size() << " points." << std::endl;
   std::cout << "map: " << map.points.size() << " points." << std::endl;
-  std::cout << "NDT has converged: " << has_converged << std::endl;
+  std::cout << "NDT has converged: " << ndt.hasConverged() << std::endl;
   std::cout << "Fitness score: " << fitness_score << std::endl;
-  std::cout << "Number of iteration: " << final_num_iteration << std::endl;
+  std::cout << "Number of iteration: " << ndt.getFinalNumIteration() << std::endl;
   std::cout << "(x,y,z,roll,pitch,yaw):" << std::endl;
   std::cout << "(" << current_pose.x << ", " << current_pose.y << ", " << current_pose.z << ", " << current_pose.roll
             << ", " << current_pose.pitch << ", " << current_pose.yaw << ")" << std::endl;
@@ -300,90 +243,7 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
   std::cout << t_localizer << std::endl;
   std::cout << "shift: " << shift << std::endl;
   std::cout << "-----------------------------------------------------------------" << std::endl;
+
 }
 
-int main(int argc, char** argv)
-{
-  previous_pose.x = 0.0;previous_pose.y = 0.0;previous_pose.z = 0.0;previous_pose.roll = 0.0;previous_pose.pitch = 0.0;previous_pose.yaw = 0.0;
-
-  ndt_pose.x = 0.0;ndt_pose.y = 0.0;ndt_pose.z = 0.0;ndt_pose.roll = 0.0;ndt_pose.pitch = 0.0;ndt_pose.yaw = 0.0;
-
-  current_pose.x = 0.0;current_pose.y = 0.0;current_pose.z = 0.0;current_pose.roll = 0.0;current_pose.pitch = 0.0;current_pose.yaw = 0.0;
-
-  guess_pose.x = 0.0;guess_pose.y = 0.0;guess_pose.z = 0.0;guess_pose.roll = 0.0;guess_pose.pitch = 0.0;guess_pose.yaw = 0.0;
-
-  added_pose.x = 0.0;added_pose.y = 0.0;added_pose.z = 0.0;added_pose.roll = 0.0;added_pose.pitch = 0.0;added_pose.yaw = 0.0;
-
-  diff_x = 0.0;diff_y = 0.0;diff_z = 0.0;diff_yaw = 0.0;
-
-  ros::init(argc, argv, "ndt_mapping");
-
-  ros::NodeHandle nh;
-  ros::NodeHandle private_nh("~");
-
-  // Set log file name.
-  char buffer[80];
-  std::time_t now = std::time(NULL);
-  std::tm* pnow = std::localtime(&now);
-  std::strftime(buffer, 80, "%Y%m%d_%H%M%S", pnow);
-  filename = "ndt_mapping_" + std::string(buffer) + ".csv";
-  ofs.open(filename.c_str(), std::ios::app);
-
-  // write header for log file
-  if (!ofs)
-  {
-    std::cerr << "Could not open " << filename << "." << std::endl;
-    exit(1);
-  }
-
-  ofs << "input->header.seq" << ","
-      << "input->header.stamp" << ","
-      << "input->header.frame_id" << ","
-      << "scan_ptr->size()" << ","
-      << "filtered_scan_ptr->size()" << ","
-      << "current_pose.x" << ","
-      << "current_pose.y" << ","
-      << "current_pose.z" << ","
-      << "current_pose.roll" << ","
-      << "current_pose.pitch" << ","
-      << "current_pose.yaw" << ","
-      << "final_num_iteration" << ","
-      << "fitness_score" << ","
-      << "ndt_res" << ","
-      << "step_size" << ","
-      << "trans_eps" << ","
-      << "max_iter" << ","
-      << "voxel_leaf_size" << ","
-      << "min_scan_range" << ","
-      << "max_scan_range" << ","
-      << "min_add_scan_shift" << std::endl;
-
-  // setting parameters
-
-  std::cout << "incremental_voxel_update: " << _incremental_voxel_update << std::endl;
-
-
-  std::cout << "(tf_x,tf_y,tf_z,tf_roll,tf_pitch,tf_yaw): (" << _tf_x << ", " << _tf_y << ", " << _tf_z << ", "
-            << _tf_roll << ", " << _tf_pitch << ", " << _tf_yaw << ")" << std::endl;
-
-
-  Eigen::Translation3f tl_btol(_tf_x, _tf_y, _tf_z);                 // tl: translation
-  Eigen::AngleAxisf rot_x_btol(_tf_roll, Eigen::Vector3f::UnitX());  // rot: rotation
-  Eigen::AngleAxisf rot_y_btol(_tf_pitch, Eigen::Vector3f::UnitY());
-  Eigen::AngleAxisf rot_z_btol(_tf_yaw, Eigen::Vector3f::UnitZ());
-  tf_btol = (tl_btol * rot_z_btol * rot_y_btol * rot_x_btol).matrix();
-  tf_ltob = tf_btol.inverse();
-
-  map.header.frame_id = "map";
-
-  ndt_map_pub = nh.advertise<sensor_msgs::PointCloud2>("/ndt_map", 1000);
-  current_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 1000);
-
-  ros::Subscriber points_sub = nh.subscribe("points_raw", 100000, points_callback);
-
-
-  ros::spin();
-
-  return 0;
-}
 
