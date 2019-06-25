@@ -46,7 +46,16 @@ include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
 SET(CMAKE_CXX_FLAGS "-O2 -g -Wall ${CMAKE_CXX_FLAGS}")
 
 
-add_executable(ndt_mapping src/ndt_mapping.cpp)
+add_executable(ndt_mapping src/ndt_mapping_node.cpp src/ndt_mapping.cpp)
 target_link_libraries(ndt_mapping ${catkin_LIBRARIES})
 add_dependencies(ndt_mapping ${catkin_EXPORTED_TARGETS})
+
+add_executable(ndt_mapping_submaps src/ndt_mapping_submaps.cpp)
+target_link_libraries(ndt_mapping_submaps ${catkin_LIBRARIES})
+add_dependencies(ndt_mapping_submaps ${catkin_EXPORTED_TARGETS})
+
+add_executable(ndt_matching src/ndt_matching.cpp)
+target_link_libraries(ndt_matching ${catkin_LIBRARIES})
+add_dependencies(ndt_matching ${catkin_EXPORTED_TARGETS})
+
 
