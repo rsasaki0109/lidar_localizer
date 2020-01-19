@@ -32,42 +32,39 @@ public:
 
 private:
   
-  ros::NodeHandle nh;
-  ros::Subscriber points_sub;
+  ros::NodeHandle nh_;
+  ros::Subscriber points_sub_;
 
   struct pose{double x,y,z;double roll,pitch,yaw;};
-  struct pose current_pose;
-  struct pose previous_pose;
+  struct pose current_pose_;
+  struct pose previous_pose_;
 
-  pcl::PointCloud<pcl::PointXYZI> map;
-  pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter;
+  pcl::PointCloud<pcl::PointXYZI> map_;
+  pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_;
   pcl::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI> ndt;
 
   // Default values
-  int max_iter ;        // Maximum iterations
-  float ndt_res ;      // Resolution
-  double step_size ;   // Step size
-  double trans_eps ;  // Transformation epsilon
+  int max_iter_ ;        // Maximum iterations
+  float ndt_res_ ;      // Resolution
+  double step_size_ ;   // Step size
+  double trans_eps_ ;  // Transformation epsilon
 
-  double voxel_leaf_size;// Leaf size of VoxelGrid filter.
+  double voxel_leaf_size_;// Leaf size of VoxelGrid filter.
 
-  ros::Publisher ndt_map_pub, current_pose_pub;
-  geometry_msgs::PoseStamped current_pose_msg;
+  ros::Publisher ndt_map_pub_, current_pose_pub_;
+  geometry_msgs::PoseStamped current_pose_msg_;
+
+  tf::TransformBroadcaster br_;
 
   int initial_scan_loaded;
-  double min_add_scan_shift;
+  double min_add_scan_shift_;
 
   double _tf_x, _tf_y, _tf_z, _tf_roll, _tf_pitch, _tf_yaw;
-  Eigen::Matrix4f tf_btol, tf_ltob;//base_link2localizer等の略?
+  Eigen::Matrix4f tf_btol_, tf_ltob_;//base_link2localizer等の略?
 
   bool _incremental_voxel_update;
-
-  double fitness_score;
-  bool has_converged;
-  int final_num_iteration;
-  double transformation_probability;
   
-  bool is_first_map;
+  bool is_first_map_;
 
   std::ofstream ofs;
   std::string filename;
