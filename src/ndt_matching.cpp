@@ -53,7 +53,7 @@ struct pose
 };
 
 static pose initial_pose, predict_pose, predict_pose_imu, predict_pose_odom, predict_pose_imu_odom, previous_pose_,
-    ndt_pose, current_pose_, current_pose__imu, current_pose__odom, current_pose__imu_odom, localizer_pose;
+    ndt_pose, current_pose_, current_pose_imu, current_pose_odom, current_pose_imu_odom, localizer_pose;
 
 static double offset_x, offset_y, offset_z, offset_yaw;  // current_pos - previous_pose_
 static double offset_imu_x, offset_imu_y, offset_imu_z, offset_imu_roll, offset_imu_pitch, offset_imu_yaw;
@@ -94,10 +94,10 @@ static ros::Publisher ndt_pose_pub;
 static geometry_msgs::PoseStamped ndt_pose_msg;
 
 // current_pose_ is published by vel_pose_mux
-/*
-static ros::Publisher current_pose__pub_;
-static geometry_msgs::PoseStamped current_pose__msg_;
- */
+
+static ros::Publisher current_pose_pub_;
+static geometry_msgs::PoseStamped current_pose_msg_;
+
 
 static ros::Publisher localizer_pose_pub;
 static geometry_msgs::PoseStamped localizer_pose_msg;
@@ -287,7 +287,7 @@ static void gnss_callback(const geometry_msgs::PoseStamped::ConstPtr& input)
     current_pose_.pitch = current_gnss_pose.pitch;
     current_pose_.yaw = current_gnss_pose.yaw;
 
-    current_pose__imu = current_pose__odom = current_pose__imu_odom = current_pose_;
+    current_pose_imu = current_pose_odom = current_pose_imu_odom = current_pose_;
 
     diff_x = current_pose_.x - previous_pose_.x;
     diff_y = current_pose_.y - previous_pose_.y;
@@ -371,7 +371,7 @@ static void initialpose_callback(const geometry_msgs::PoseWithCovarianceStamped:
     current_pose_.z = nearest_z;
   }
 
-  current_pose__imu = current_pose__odom = current_pose__imu_odom = current_pose_;
+  current_pose_imu = current_pose_odom = current_pose_imu_odom = current_pose_;
   previous_pose_.x = current_pose_.x;
   previous_pose_.y = current_pose_.y;
   previous_pose_.z = current_pose_.z;
@@ -428,14 +428,14 @@ static void imu_odom_calc(ros::Time current_time)
   double diff_imu_pitch = imu.angular_velocity.y * diff_time;
   double diff_imu_yaw = imu.angular_velocity.z * diff_time;
 
-  current_pose__imu_odom.roll += diff_imu_roll;
-  current_pose__imu_odom.pitch += diff_imu_pitch;
-  current_pose__imu_odom.yaw += diff_imu_yaw;
+  current_pose_imu_odom.roll += diff_imu_roll;
+  current_pose_imu_odom.pitch += diff_imu_pitch;
+  current_pose_imu_odom.yaw += diff_imu_yaw;
 
   double diff_distance = odom.twist.twist.linear.x * diff_time;
-  offset_imu_odom_x += diff_distance * cos(-current_pose__imu_odom.pitch) * cos(current_pose__imu_odom.yaw);
-  offset_imu_odom_y += diff_distance * cos(-current_pose__imu_odom.pitch) * sin(current_pose__imu_odom.yaw);
-  offset_imu_odom_z += diff_distance * sin(-current_pose__imu_odom.pitch);
+  offset_imu_odom_x += diff_distance * cos(-current_pose_imu_odom.pitch) * cos(current_pose_imu_odom.yaw);
+  offset_imu_odom_y += diff_distance * cos(-current_pose_imu_odom.pitch) * sin(current_pose_imu_odom.yaw);
+  offset_imu_odom_z += diff_distance * sin(-current_pose_imu_odom.pitch);
 
   offset_imu_odom_roll += diff_imu_roll;
   offset_imu_odom_pitch += diff_imu_pitch;
@@ -460,14 +460,14 @@ static void odom_calc(ros::Time current_time)
   double diff_odom_pitch = odom.twist.twist.angular.y * diff_time;
   double diff_odom_yaw = odom.twist.twist.angular.z * diff_time;
 
-  current_pose__odom.roll += diff_odom_roll;
-  current_pose__odom.pitch += diff_odom_pitch;
-  current_pose__odom.yaw += diff_odom_yaw;
+  current_pose_odom.roll += diff_odom_roll;
+  current_pose_odom.pitch += diff_odom_pitch;
+  current_pose_odom.yaw += diff_odom_yaw;
 
   double diff_distance = odom.twist.twist.linear.x * diff_time;
-  offset_odom_x += diff_distance * cos(-current_pose__odom.pitch) * cos(current_pose__odom.yaw);
-  offset_odom_y += diff_distance * cos(-current_pose__odom.pitch) * sin(current_pose__odom.yaw);
-  offset_odom_z += diff_distance * sin(-current_pose__odom.pitch);
+  offset_odom_x += diff_distance * cos(-current_pose_odom.pitch) * cos(current_pose_odom.yaw);
+  offset_odom_y += diff_distance * cos(-current_pose_odom.pitch) * sin(current_pose_odom.yaw);
+  offset_odom_z += diff_distance * sin(-current_pose_odom.pitch);
 
   offset_odom_roll += diff_odom_roll;
   offset_odom_pitch += diff_odom_pitch;
@@ -492,22 +492,22 @@ static void imu_calc(ros::Time current_time)
   double diff_imu_pitch = imu.angular_velocity.y * diff_time;
   double diff_imu_yaw = imu.angular_velocity.z * diff_time;
 
-  current_pose__imu.roll += diff_imu_roll;
-  current_pose__imu.pitch += diff_imu_pitch;
-  current_pose__imu.yaw += diff_imu_yaw;
+  current_pose_imu.roll += diff_imu_roll;
+  current_pose_imu.pitch += diff_imu_pitch;
+  current_pose_imu.yaw += diff_imu_yaw;
 
   double accX1 = imu.linear_acceleration.x;
-  double accY1 = std::cos(current_pose__imu.roll) * imu.linear_acceleration.y -
-                 std::sin(current_pose__imu.roll) * imu.linear_acceleration.z;
-  double accZ1 = std::sin(current_pose__imu.roll) * imu.linear_acceleration.y +
-                 std::cos(current_pose__imu.roll) * imu.linear_acceleration.z;
+  double accY1 = std::cos(current_pose_imu.roll) * imu.linear_acceleration.y -
+                 std::sin(current_pose_imu.roll) * imu.linear_acceleration.z;
+  double accZ1 = std::sin(current_pose_imu.roll) * imu.linear_acceleration.y +
+                 std::cos(current_pose_imu.roll) * imu.linear_acceleration.z;
 
-  double accX2 = std::sin(current_pose__imu.pitch) * accZ1 + std::cos(current_pose__imu.pitch) * accX1;
+  double accX2 = std::sin(current_pose_imu.pitch) * accZ1 + std::cos(current_pose_imu.pitch) * accX1;
   double accY2 = accY1;
-  double accZ2 = std::cos(current_pose__imu.pitch) * accZ1 - std::sin(current_pose__imu.pitch) * accX1;
+  double accZ2 = std::cos(current_pose_imu.pitch) * accZ1 - std::sin(current_pose_imu.pitch) * accX1;
 
-  double accX = std::cos(current_pose__imu.yaw) * accX2 - std::sin(current_pose__imu.yaw) * accY2;
-  double accY = std::sin(current_pose__imu.yaw) * accX2 + std::cos(current_pose__imu.yaw) * accY2;
+  double accX = std::cos(current_pose_imu.yaw) * accX2 - std::sin(current_pose_imu.yaw) * accY2;
+  double accY = std::sin(current_pose_imu.yaw) * accX2 + std::cos(current_pose_imu.yaw) * accY2;
   double accZ = accZ2;
 
   offset_imu_x += current_velocity_imu_x * diff_time + accX * diff_time * diff_time / 2.0;
@@ -826,30 +826,30 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
     current_velocity_z = (diff_time > 0) ? (diff_z / diff_time) : 0;
     angular_velocity = (diff_time > 0) ? (diff_yaw / diff_time) : 0;
 
-    current_pose__imu.x = current_pose_.x;
-    current_pose__imu.y = current_pose_.y;
-    current_pose__imu.z = current_pose_.z;
-    current_pose__imu.roll = current_pose_.roll;
-    current_pose__imu.pitch = current_pose_.pitch;
-    current_pose__imu.yaw = current_pose_.yaw;
+    current_pose_imu.x = current_pose_.x;
+    current_pose_imu.y = current_pose_.y;
+    current_pose_imu.z = current_pose_.z;
+    current_pose_imu.roll = current_pose_.roll;
+    current_pose_imu.pitch = current_pose_.pitch;
+    current_pose_imu.yaw = current_pose_.yaw;
 
     current_velocity_imu_x = current_velocity_x;
     current_velocity_imu_y = current_velocity_y;
     current_velocity_imu_z = current_velocity_z;
 
-    current_pose__odom.x = current_pose_.x;
-    current_pose__odom.y = current_pose_.y;
-    current_pose__odom.z = current_pose_.z;
-    current_pose__odom.roll = current_pose_.roll;
-    current_pose__odom.pitch = current_pose_.pitch;
-    current_pose__odom.yaw = current_pose_.yaw;
+    current_pose_odom.x = current_pose_.x;
+    current_pose_odom.y = current_pose_.y;
+    current_pose_odom.z = current_pose_.z;
+    current_pose_odom.roll = current_pose_.roll;
+    current_pose_odom.pitch = current_pose_.pitch;
+    current_pose_odom.yaw = current_pose_.yaw;
 
-    current_pose__imu_odom.x = current_pose_.x;
-    current_pose__imu_odom.y = current_pose_.y;
-    current_pose__imu_odom.z = current_pose_.z;
-    current_pose__imu_odom.roll = current_pose_.roll;
-    current_pose__imu_odom.pitch = current_pose_.pitch;
-    current_pose__imu_odom.yaw = current_pose_.yaw;
+    current_pose_imu_odom.x = current_pose_.x;
+    current_pose_imu_odom.y = current_pose_.y;
+    current_pose_imu_odom.z = current_pose_.z;
+    current_pose_imu_odom.roll = current_pose_.roll;
+    current_pose_imu_odom.pitch = current_pose_.pitch;
+    current_pose_imu_odom.yaw = current_pose_.yaw;
 
     current_velocity_smooth = (current_velocity + previous_velocity + previous_previous_velocity) / 3.0;
     if (std::fabs(current_velocity_smooth) < 0.2)
@@ -967,15 +967,15 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
     current_q.setRPY(current_pose_.roll, current_pose_.pitch, current_pose_.yaw);
     // current_pose_ is published by vel_pose_mux
     /*
-    current_pose__msg_.header.frame_id = "/map";
-    current_pose__msg_.header.stamp = current_scan_time;
-    current_pose__msg_.pose.position.x = current_pose_.x;
-    current_pose__msg_.pose.position.y = current_pose_.y;
-    current_pose__msg_.pose.position.z = current_pose_.z;
-    current_pose__msg_.pose.orientation.x = current_q.x();
-    current_pose__msg_.pose.orientation.y = current_q.y();
-    current_pose__msg_.pose.orientation.z = current_q.z();
-    current_pose__msg_.pose.orientation.w = current_q.w();
+    current_pose_msg_.header.frame_id = "/map";
+    current_pose_msg_.header.stamp = current_scan_time;
+    current_pose_msg_.pose.position.x = current_pose_.x;
+    current_pose_msg_.pose.position.y = current_pose_.y;
+    current_pose_msg_.pose.position.z = current_pose_.z;
+    current_pose_msg_.pose.orientation.x = current_q.x();
+    current_pose_msg_.pose.orientation.y = current_q.y();
+    current_pose_msg_.pose.orientation.z = current_q.z();
+    current_pose_msg_.pose.orientation.w = current_q.w();
     */
 
     localizer_q.setRPY(localizer_pose.roll, localizer_pose.pitch, localizer_pose.yaw);
@@ -1010,7 +1010,7 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
   
     ndt_pose_pub.publish(ndt_pose_msg);
     // current_pose_ is published by vel_pose_mux
-    //    current_pose__pub_.publish(current_pose__msg_);
+    //    current_pose_pub_.publish(current_pose_msg_);
     localizer_pose_pub.publish(localizer_pose_msg);
 
     // Send TF "/base_link" to "/map"
@@ -1217,7 +1217,7 @@ int main(int argc, char** argv)
   predict_pose_odom_pub = nh.advertise<geometry_msgs::PoseStamped>("/predict_pose_odom", 10);
   predict_pose_imu_odom_pub = nh.advertise<geometry_msgs::PoseStamped>("/predict_pose_imu_odom", 10);
   ndt_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/ndt_pose", 10);
-  // current_pose__pub_ = nh.advertise<geometry_msgs::PoseStamped>("/current_pose_", 10);
+  current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/current_pose_", 10);
   localizer_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/localizer_pose", 10);
   estimate_twist_pub = nh.advertise<geometry_msgs::TwistStamped>("/estimate_twist", 10);
   estimated_vel_mps_pub = nh.advertise<std_msgs::Float32>("/estimated_vel_mps", 10);
