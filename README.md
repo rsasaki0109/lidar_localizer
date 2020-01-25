@@ -23,6 +23,7 @@ ndt_matching
 ## Parameter
 
 ndt
+
 |Name|Type|Description|Default value|
 |:---|:---|:---|:---|
 |max_iter|int|max iteration for alignment |25|
@@ -32,11 +33,13 @@ ndt
 |voxel_leaf_size|double|a down sample size of a input cloud[m]|0.2|
 
 ndt_mapping 
+
 |Name|Type|Description|Default value|
 |:---|:---|:---|:---|
 |min_add_scan_shift|double|a moving distance of a map update[m]|1.5|
 
 ndt_matching 
+
 |Name|Type|Description|Default value|
 |:---|:---|:---|:---|
 |use_gnss||||
