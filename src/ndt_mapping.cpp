@@ -5,15 +5,14 @@ ndt_mapping::ndt_mapping()
 
   points_sub_ = nh_.subscribe("points_raw", 100000, &ndt_mapping::points_callback,this);
   ndt_map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/ndt_map", 1000);
-  current_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/current_pose_", 1000);
+  current_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/current_pose", 1000);
 
   // Default values
-  max_iter_ = 30;        // Maximum iterations
-  ndt_res_ = 5.0;      // Resolution
-  step_size_ = 0.1;   // Step size
-  trans_eps_ = 0.01;  // Transformation epsilon
-
-  voxel_leaf_size_ = 2.0;// Leaf size of VoxelGrid filter.
+  nh_.param("max_iter", max_iter_, 30);
+  nh_.param("step_size", step_size_, 0.1);
+  nh_.param("ndt_res", ndt_res_, 5.0);
+  nh_.param("trans_eps", trans_eps_, 0.01);
+  nh_.param("voxel_leaf_size", voxel_leaf_size_, 2.0);
 
   initial_scan_loaded = 0;
   min_add_scan_shift_ = 1.0;
@@ -136,8 +135,6 @@ void ndt_mapping::points_callback(const sensor_msgs::PointCloud2::ConstPtr& inpu
   //sensor_msgs::PointCloud2::Ptr map_msg_ptr(new sensor_msgs::PointCloud2);
   //pcl::toROSMsg(*map_ptr, *map_msg_ptr);
   //ndt_map_pub_.publish(*map_msg_ptr);// it makes rviz very slow.
-
-  
 
   current_pose_msg_.header.frame_id = "map";
   current_pose_msg_.header.stamp = input->header.stamp;

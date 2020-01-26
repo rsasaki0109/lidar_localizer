@@ -45,7 +45,7 @@ private:
 
   // Default values
   int max_iter_ ;        // Maximum iterations
-  float ndt_res_ ;      // Resolution
+  double ndt_res_ ;      // Resolution
   double step_size_ ;   // Step size
   double trans_eps_ ;  // Transformation epsilon
 
