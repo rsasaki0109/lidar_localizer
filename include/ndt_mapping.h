@@ -7,6 +7,7 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/Imu.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
 #include <velodyne_pointcloud/point_types.h>
@@ -36,7 +37,7 @@ private:
   ros::Subscriber points_sub_;
 
   struct pose{double x,y,z;double roll,pitch,yaw;};
-  struct pose current_pose_;
+  struct pose current_pose_,current_pose_imu_;
   struct pose previous_pose_;
 
   pcl::PointCloud<pcl::PointXYZI> map_;
@@ -50,6 +51,11 @@ private:
   double trans_eps_ ;  // Transformation epsilon
 
   double voxel_leaf_size_;// Leaf size of VoxelGrid filter.
+
+  double scan_rate_;
+  double min_scan_range_;
+  double max_scan_range_;
+  bool use_imu_;
 
   ros::Publisher ndt_map_pub_, current_pose_pub_;
   geometry_msgs::PoseStamped current_pose_msg_;
@@ -69,5 +75,7 @@ private:
   std::ofstream ofs;
   std::string filename;
 
+  void imu_calc(ros::Time current_time);
+  void imu_callback(const sensor_msgs::Imu::Ptr& input);
   void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input);
 };
