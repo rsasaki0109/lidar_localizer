@@ -1,3 +1,25 @@
+/*
+ * Copyright 2015-2019 Autoware Foundation. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ Localization and mapping program using Normal Distributions Transform
+
+ Yuki KITSUKAWA
+ */
+
 #include "ndt_mapping.h"
 
 ndt_mapping::ndt_mapping() 
@@ -13,6 +35,10 @@ ndt_mapping::ndt_mapping()
   nh_.param("ndt_res", ndt_res_, 5.0);
   nh_.param("trans_eps", trans_eps_, 0.01);
   nh_.param("voxel_leaf_size", voxel_leaf_size_, 2.0);
+  nh_.param("scan_rate", scan_rate_, 10.0);
+  nh_.param("min_scan_range", min_scan_range_, 5.0);
+  nh_.param("max_scan_range", max_scan_range_, 200.0);
+  nh_.param("use_imu", use_imu_, false);
 
   initial_scan_loaded = 0;
   min_add_scan_shift_ = 1.0;
@@ -44,13 +70,21 @@ ndt_mapping::ndt_mapping()
 
   is_first_map_ = true;
 
+  std::cout << "ndt_res: " << ndt_res_ << std::endl;
+  std::cout << "step_size: " << step_size_ << std::endl;
+  std::cout << "trans_epsilon: " << trans_eps_ << std::endl;
+  std::cout << "max_iter: " << max_iter_ << std::endl;
+  std::cout << "voxel_leaf_size: " << voxel_leaf_size_ << std::endl;
+  std::cout << "min_scan_range: " << min_scan_range_ << std::endl;
+  std::cout << "max_scan_range: " << max_scan_range_ << std::endl;
+  std::cout << "min_add_scan_shift: " << min_add_scan_shift_ << std::endl;
 }; 
 
 ndt_mapping::~ndt_mapping(){}; 
 
 void ndt_mapping::points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
 {
-  pcl::PointCloud<pcl::PointXYZI> scan;
+  pcl::PointCloud<pcl::PointXYZI> tmp, scan;
   pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_scan_ptr(new pcl::PointCloud<pcl::PointXYZI>());
   pcl::PointCloud<pcl::PointXYZI>::Ptr transformed_scan_ptr(new pcl::PointCloud<pcl::PointXYZI>());
   tf::Quaternion q;
@@ -60,7 +94,57 @@ void ndt_mapping::points_callback(const sensor_msgs::PointCloud2::ConstPtr& inpu
   //static tf::TransformBroadcaster br;
   tf::Transform transform;
 
-  pcl::fromROSMsg(*input, scan);
+  pcl::fromROSMsg(*input, tmp);
+  double r;
+  Eigen::Vector3d point_pos;
+  pcl::PointXYZI p;
+  for (pcl::PointCloud<pcl::PointXYZI>::const_iterator item = tmp.begin(); item != tmp.end(); item++)
+  {
+    if(use_imu_){
+      // deskew(TODO:inplement of predicting pose by imu)
+      point_pos.x() = (double)item->x;
+      point_pos.y() = (double)item->y;
+      point_pos.z() = (double)item->z;
+      double s = scan_rate_ * (double(item->intensity) - int(item->intensity));
+
+      point_pos.x() -= s * current_pose_msg_.pose.position.x;//current_pose_imu_
+      point_pos.y() -= s * current_pose_msg_.pose.position.y;
+      point_pos.z() -= s * current_pose_msg_.pose.position.z;
+
+      Eigen::Quaterniond start_quat, end_quat, mid_quat;
+      mid_quat.setIdentity();
+      end_quat = Eigen::Quaterniond(
+        current_pose_msg_.pose.orientation.w,
+        current_pose_msg_.pose.orientation.x,
+        current_pose_msg_.pose.orientation.y,
+        current_pose_msg_.pose.orientation.z);
+      start_quat = mid_quat.slerp(s, end_quat);
+
+      point_pos = start_quat.conjugate() * start_quat * point_pos;
+
+      point_pos.x() += current_pose_msg_.pose.position.x;
+      point_pos.y() += current_pose_msg_.pose.position.y;
+      point_pos.z() += current_pose_msg_.pose.position.z;
+
+      p.x = point_pos.x();
+      p.y = point_pos.y();
+      p.z = point_pos.z();
+    }
+    else{
+      p.x = (double)item->x;
+      p.y = (double)item->y;
+      p.z = (double)item->z;
+    }
+    p.intensity = (double)item->intensity;
+  
+    // minmax
+    r = sqrt(pow(p.x, 2.0) + pow(p.y, 2.0));
+    if (min_scan_range_ < r && r < max_scan_range_)
+    {
+      scan.push_back(p);
+    }
+  }
+
   pcl::PointCloud<pcl::PointXYZI>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZI>(scan));
 
   // Add initial point cloud to velodyne_map
@@ -92,11 +176,7 @@ void ndt_mapping::points_callback(const sensor_msgs::PointCloud2::ConstPtr& inpu
   pcl::PointCloud<pcl::PointXYZI>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
  
   ndt.align(*output_cloud, init_guess);
-  double fitness_score = ndt.getFitnessScore();
   t_localizer = ndt.getFinalTransformation();
-  bool has_converged = ndt.hasConverged();
-  int final_num_iteration = ndt.getFinalNumIteration();
-  double transformation_probability = ndt.getTransformationProbability();
 
   t_base_link = t_localizer * tf_ltob_;
 
@@ -150,7 +230,7 @@ void ndt_mapping::points_callback(const sensor_msgs::PointCloud2::ConstPtr& inpu
   std::cout << "transformed_scan_ptr: " << transformed_scan_ptr->points.size() << " points." << std::endl;
   std::cout << "map: " << map_.points.size() << " points." << std::endl;
   std::cout << "NDT has converged: " << ndt.hasConverged() << std::endl;
-  std::cout << "Fitness score: " << fitness_score << std::endl;
+  std::cout << "Fitness score: " << ndt.getFitnessScore() << std::endl;
   std::cout << "Number of iteration: " << ndt.getFinalNumIteration() << std::endl;
   std::cout << "(x,y,z,roll,pitch,yaw):" << std::endl;
   std::cout << "(" << current_pose_.x << ", " << current_pose_.y << ", " << current_pose_.z << ", " << current_pose_.roll
