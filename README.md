@@ -38,18 +38,6 @@ ndt_mapping
 |:---|:---|:---|:---|
 |min_add_scan_shift|double|a moving distance of a map update[m]|1.5|
 
-ndt_matching 
-
-|Name|Type|Description|Default value|
-|:---|:---|:---|:---|
-|use_gnss||||
-|queue_size||||
-|offset||||
-|get_height||||
-|use_local_transform||||
-|use_odom||||
-|use_imu||||
-
 ## Usage
 ### Mapping 
 
