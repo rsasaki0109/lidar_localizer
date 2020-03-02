@@ -17,6 +17,8 @@ ndt_matching
 - input   
 /filtered_points (sensor_msgs/PointCloud2)  
 /points_map (sensor_msgs/PointCloud2)  
+/initialpose (geometry_msgs/PoseWithCovarianceStamped)   
+
 - output  
 /curent_pose (geometry_msgs/PoseStamped)  
 
@@ -42,6 +44,10 @@ ndt_mapping
 ### Mapping 
 
 ```
+rviz -d src/ndt_mapping/config/mapping.rviz
+```
+
+```
 roslaunch ndt_mapping ndt_mapping.launch
 ```
 
@@ -53,13 +59,22 @@ rosrun pcl_ros pointcloud_to_pcd input:=/ndt_map prefix:=map
 
 ### Matching
 
+```
+rviz -d src/ndt_mapping/config/matching.rviz
+```
+
 
 ```
 roslaunch ndt_mapping ndt_matching.launch
 ```
 
 ```
-rosrun pcl_ros pcd_to_pointcloud map_0.pcd /cloud_pcd:=/points_map
+rostopic pub /initialpose geometry_msgs/PoseWithCovarianceStamped '{header:{frame_id: "map"},pose: {pose: {position: {x: 0, y: 0, z: 0}, orientation: {z: 0, w: 1}}}}'
 ```
+
+```
+rosrun pcl_ros pcd_to_pointcloud map_0.pcd /cloud_pcd:=/points_map _frame_id:=map
+```
+
 
 
