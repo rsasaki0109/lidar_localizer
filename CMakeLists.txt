@@ -26,14 +26,13 @@ find_package(catkin REQUIRED COMPONENTS
         pcl_ros
         sensor_msgs
         pcl_conversions
-        #velodyne_pointcloud
         )
 
 ###################################
 ## catkin specific configuration ##
 ###################################
 catkin_package(
-        CATKIN_DEPENDS std_msgs velodyne_pointcloud  
+        CATKIN_DEPENDS std_msgs  
         DEPENDS PCL
 )
 
