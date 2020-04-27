@@ -4,9 +4,6 @@ project(ndt_mapping)
 add_compile_options(-std=c++11)
 
 find_package(PCL REQUIRED)
-
-
-
 find_package(Eigen3 QUIET)
 
 if (NOT EIGEN3_FOUND)
