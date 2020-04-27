@@ -26,7 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
         pcl_ros
         sensor_msgs
         pcl_conversions
-        velodyne_pointcloud
+        #velodyne_pointcloud
         )
 
 ###################################
