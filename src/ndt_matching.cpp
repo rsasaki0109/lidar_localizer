@@ -93,7 +93,7 @@ static pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> ndt;
 
 // Default values
 static int max_iter_ = 30;        // Maximum iterations
-static float ndt_res_ = 1.0;      // Resolution
+static float ndt_res_ = 3.0;      // Resolution
 static double step_size_ = 0.1;   // Step size
 static double trans_eps_ = 0.01;  // Transformation epsilon
 
@@ -1185,6 +1185,13 @@ int main(int argc, char** argv)
 
   ros::NodeHandle nh;
   ros::NodeHandle private_nh("~");
+
+  // Set params
+  
+  private_nh.getParam("max_iter_", max_iter_);
+  private_nh.getParam("ndt_res_", ndt_res_);
+  private_nh.getParam("step_size_", step_size_);
+  private_nh.getParam("trans_eps_", trans_eps_);
   
   // Set log file name.
   private_nh.getParam("output_log_data", _output_log_data);
