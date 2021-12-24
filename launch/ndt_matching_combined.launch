@@ -1,0 +1,19 @@
+<launch>
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ndt_mapping)/config/matching.rviz"/>
+    <node pkg="tf" type="static_transform_publisher" name="velodyne" args="0 0 0 0 0 0 base_link velodyne 100" />
+    <node pkg="ndt_mapping" name="map_loader" type="map_loader" output="screen">
+        <param name="map_path" value="$(find ndt_mapping)/map/map.pcd"/>
+    </node>
+    <node pkg="ndt_mapping" name="voxel_grid_filter" type="voxel_grid_filter" output="screen">
+        <param name="points_topic" value="/points_raw"/>
+        <param name="voxel_leaf_size" value="2.0"/>
+        <param name="measurement_range" value="200"/>
+    </node>    
+    <node pkg="ndt_mapping" type="ndt_matching" name="ndt_matching" output="screen">
+        <param name="max_iter_" value="50"/>
+        <param name="ndt_res_" value="5.0"/>
+        <param name="step_size_" value="0.1"/>
+        <param name="trans_eps_" value="0.01"/>
+    </node>
+    <arg name="leaf_size" default="0.5" />
+</launch>

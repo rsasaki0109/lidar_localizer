@@ -5,7 +5,6 @@
 
 ros::Publisher points_map_pub;
 
-//std::string map_path = "/home/akio/my_ws/src/ndt_mapping/map/RFS_big_map_autoware_1.pcd";
 std::string map_path;
 
 int main(int argc, char** argv)
