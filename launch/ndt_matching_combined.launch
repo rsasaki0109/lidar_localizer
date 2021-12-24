@@ -5,7 +5,7 @@
         <param name="map_path" value="$(find ndt_mapping)/map/map.pcd"/>
     </node>
     <node pkg="ndt_mapping" name="voxel_grid_filter" type="voxel_grid_filter" output="screen">
-        <param name="points_topic" value="/points_raw"/>
+        <param name="points_topic" value="/combined_rslidar_points"/>
         <param name="voxel_leaf_size" value="2.0"/>
         <param name="measurement_range" value="200"/>
     </node>    
