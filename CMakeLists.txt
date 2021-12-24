@@ -55,3 +55,11 @@ target_link_libraries(ndt_matching ${catkin_LIBRARIES})
 add_dependencies(ndt_matching ${catkin_EXPORTED_TARGETS})
 
 
+add_executable(voxel_grid_filter src/voxel_grid_filter.cpp)
+target_link_libraries(voxel_grid_filter ${catkin_LIBRARIES})
+add_dependencies(voxel_grid_filter ${catkin_EXPORTED_TARGETS})
+
+add_executable(map_loader src/map_loader.cpp)
+target_link_libraries(map_loader ${catkin_LIBRARIES})
+add_dependencies(map_loader ${catkin_EXPORTED_TARGETS})
+
