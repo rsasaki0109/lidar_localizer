@@ -1,7 +1,7 @@
 ndt_mapping
 ====
 ![CI](https://github.com/rsasaki0109/ndt_mapping/workflows/Melodic/badge.svg)  
-This is the exraction of the mapping from the [Autoware](https://github.com/autowarefoundation/autoware)  
+This is the exraction of the mapping from the [Autoware](https://github.com/Autoware-AI/autoware.ai)  
 I have no copyright on this software and the license is governed by autoware.
 ## Overview
 ndt_mapping package
