@@ -1,10 +1,10 @@
-ndt_mapping
+lidar_localizer
 ====
-![CI](https://github.com/rsasaki0109/ndt_mapping/workflows/Melodic/badge.svg)  
+![CI](https://github.com/rsasaki0109/lidar_localizer/workflows/Melodic/badge.svg)  
 This is the exraction of the mapping from the [Autoware](https://github.com/Autoware-AI/autoware.ai)  
-I have no copyright on this software and the license is governed by autoware.
+I have no copyright on this software and the license is autoware compliant.
 ## Overview
-ndt_mapping package
+lidar_localizer package
 
 ## IO
 ndt_mapping 
@@ -45,11 +45,11 @@ ndt_mapping
 ### Mapping 
 
 ```
-rviz -d src/ndt_mapping/config/mapping.rviz
+rviz -d src/lidar_localizer/config/mapping.rviz
 ```
 
 ```
-roslaunch ndt_mapping ndt_mapping.launch
+roslaunch lidar_localizer ndt_mapping.launch
 ```
 
 to save a map
@@ -58,15 +58,17 @@ to save a map
 rosrun pcl_ros pointcloud_to_pcd input:=/ndt_map prefix:=map
 ```
 
+When processing long distance data, it is recommended to use ndt_mapping_submaps instead of ndt_mapping.
+
 ### Matching
 
 ```
-rviz -d src/ndt_mapping/config/matching.rviz
+rviz -d src/lidar_localizer/config/matching.rviz
 ```
 
 
 ```
-roslaunch ndt_mapping ndt_matching.launch
+roslaunch lidar_localizer ndt_matching.launch
 ```
 
 ```
