@@ -40,6 +40,10 @@ ndt_mapping::ndt_mapping()
   nh_.param("max_scan_range", max_scan_range_, 200.0);
   nh_.param("use_imu", use_imu_, false);
 
+  ros::NodeHandle pnh_("~");
+  pnh_.param<std::string>("robot_frame", robot_frame_, std::string("base_link"));
+  pnh_.param<std::string>("map_frame", map_frame_, std::string("map"));
+
   initial_scan_loaded = 0;
   min_add_scan_shift_ = 1.0;
 
@@ -56,7 +60,7 @@ ndt_mapping::ndt_mapping()
   tf_btol_ = (tl_btol * rot_z_btol * rot_y_btol * rot_x_btol).matrix();
   tf_ltob_ = tf_btol_.inverse();
 
-  map_.header.frame_id = "map";
+  map_.header.frame_id = map_frame_;
 
   current_pose_.x = current_pose_.y = current_pose_.z = 0.0;current_pose_.roll = current_pose_.pitch = current_pose_.yaw = 0.0;
   previous_pose_.x = previous_pose_.y = previous_pose_.z = 0.0;previous_pose_.roll = previous_pose_.pitch = previous_pose_.yaw = 0.0;
@@ -197,7 +201,7 @@ void ndt_mapping::points_callback(const sensor_msgs::PointCloud2::ConstPtr& inpu
   q.setRPY(current_pose_.roll, current_pose_.pitch, current_pose_.yaw); //q from rpy
   transform.setRotation(q);//trans from q
 
-  br_.sendTransform(tf::StampedTransform(transform, input->header.stamp, "map", "base_link"));
+  br_.sendTransform(tf::StampedTransform(transform, input->header.stamp, map_frame_, robot_frame_));
 
   double shift = sqrt(pow(current_pose_.x - previous_pose_.x, 2.0) + pow(current_pose_.y - previous_pose_.y, 2.0));
   if (shift >= min_add_scan_shift_)
