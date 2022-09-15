@@ -51,8 +51,9 @@ public:
   ~ndt_mapping();
 
 private:
-  
+
   ros::NodeHandle nh_;
+  ros::NodeHandle pnh_;
   ros::Subscriber points_sub_;
 
   struct pose{double x,y,z;double roll,pitch,yaw;};
@@ -75,6 +76,9 @@ private:
   double min_scan_range_;
   double max_scan_range_;
   bool use_imu_;
+
+  std::string robot_frame_;
+  std::string map_frame_;
 
   ros::Publisher ndt_map_pub_, current_pose_pub_;
   geometry_msgs::PoseStamped current_pose_msg_;
