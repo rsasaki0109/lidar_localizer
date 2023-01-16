@@ -1,7 +1,7 @@
 lidar_localizer
 ====
 ![CI](https://github.com/rsasaki0109/lidar_localizer/workflows/Melodic/badge.svg)  
-This is the exraction of the localization and mapping packages from the [Autoware](https://github.com/Autoware-AI/autoware.ai)  
+This is the exraction of the localization and mapping packages from the [Autoware AI](https://github.com/autowarefoundation/autoware/tree/autoware-ai)  
 I am not the original author on this software and the license is in accordance with Autoware.
 ## Overview
 lidar_localizer package
